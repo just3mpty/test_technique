@@ -1,72 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
-import {
-    Grid2,
-    Card,
-    CardMedia,
-    CardContent,
-    Typography,
-    Button,
-    Box,
-    ButtonGroup,
-    Fab,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    TextField,
-} from "@mui/material";
-import { Add, Delete, Refresh } from "@mui/icons-material";
-
-type ProductType = {
-    _id: number;
-    name: string;
-    type: string;
-    price: number;
-    rating: number;
-    warranty_years: number;
-    available: boolean;
-};
-
-const products: ProductType[] = [
-    {
-        _id: 1,
-        name: "AC1 Phone1",
-        type: "phone",
-        price: 200.05,
-        rating: 3.8,
-        warranty_years: 1,
-        available: true,
-    },
-    {
-        _id: 2,
-        name: "AC2 Phone2",
-        type: "phone",
-        price: 147.21,
-        rating: 1,
-        warranty_years: 3,
-        available: false,
-    },
-    {
-        _id: 3,
-        name: "AC3 Phone3",
-        type: "phone",
-        price: 150,
-        rating: 2,
-        warranty_years: 1,
-        available: true,
-    },
-    {
-        _id: 4,
-        name: "AC4 Phone4",
-        type: "phone",
-        price: 50.2,
-        rating: 3,
-        warranty_years: 2,
-        available: true,
-    },
-];
+import React, { useState, useEffect } from "react";
+import { Grid2, Box, Fab, Typography, Button } from "@mui/material";
+import { Add } from "@mui/icons-material";
+import ProductCard from "@/components/ProductCard";
+import ProductDialog from "@/components/ProductsDialog";
+import { ProductType } from "@/types/ProductType";
 
 export default function HomePage() {
     const [openDialog, setOpenDialog] = useState(false);
@@ -74,13 +13,40 @@ export default function HomePage() {
     const [selectedProduct, setSelectedProduct] = useState<ProductType | null>(
         null
     );
-    const [formValues, setFormValues] = useState({
+    const [formValues, setFormValues] = useState<ProductType>({
+        _id: "",
         name: "",
         type: "",
         price: 0,
         warranty_years: 0,
         available: false,
+        rating: 0,
     });
+
+    const [products, setProducts] = useState<ProductType[]>([]);
+    const [loading, setLoading] = useState<boolean>(true);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const fetchProducts = async () => {
+            try {
+                const response = await fetch("/api/products");
+                if (!response.ok) {
+                    throw new Error(
+                        "Erreur lors de la récupération des produits"
+                    );
+                }
+                const data = await response.json();
+                setProducts(data);
+            } catch (error: any) {
+                setError(error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchProducts();
+    }, []);
 
     const handleOpenDialog = (
         type: "add" | "update" | "delete",
@@ -96,6 +62,7 @@ export default function HomePage() {
                 price: product.price,
                 warranty_years: product.warranty_years,
                 available: product.available,
+                rating: product.rating,
             });
         } else if (type === "add") {
             setFormValues({
@@ -104,6 +71,7 @@ export default function HomePage() {
                 price: 0,
                 warranty_years: 0,
                 available: false,
+                rating: 0,
             });
         }
 
@@ -118,78 +86,122 @@ export default function HomePage() {
         setFormValues((prev) => ({ ...prev, [field]: value }));
     };
 
+    const handleAddProduct = (newProduct: ProductType) => {
+        setProducts((prev) => [...prev, newProduct]);
+    };
+
+    const handleAddProductSubmit = async () => {
+        try {
+            // Envoi de la requête POST pour ajouter le produit
+            const response = await fetch("/api/products", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(formValues), // On envoie les valeurs du formulaire
+            });
+
+            if (!response.ok) {
+                throw new Error("Erreur lors de l'ajout du produit");
+            }
+
+            // Récupération du produit créé
+            const newProduct = await response.json();
+
+            // Mettre à jour l'état local pour inclure le nouveau produit
+            handleAddProduct(newProduct);
+
+            // Fermer le dialog après l'ajout
+            setOpenDialog(false);
+        } catch (error: any) {
+            setError(error.message); // Afficher l'erreur si la requête échoue
+        }
+    };
+
+    const updateProduct = async (id: string, updatedProduct: ProductType) => {
+        const res = await fetch(`/api/products/${id}`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(updatedProduct),
+        });
+        return res.json();
+    };
+
+    const deleteProduct = async (id: string) => {
+        const res = await fetch(`/api/products/${id}`, {
+            method: "DELETE",
+        });
+        return res.json();
+    };
+
+    const handleUpdateProduct = async () => {
+        if (selectedProduct && selectedProduct._id) {
+            const updatedProduct = { ...selectedProduct, ...formValues };
+            const data = await updateProduct(
+                selectedProduct._id,
+                updatedProduct
+            );
+            setProducts((prevProducts) =>
+                prevProducts.map((product) =>
+                    product._id === data._id ? data : product
+                )
+            );
+            setOpenDialog(false);
+        }
+    };
+
+    const handleDeleteProduct = async () => {
+        if (selectedProduct && selectedProduct._id) {
+            const data = await deleteProduct(selectedProduct._id);
+            setProducts((prevProducts) =>
+                prevProducts.filter((product) => product._id !== data._id)
+            );
+            setOpenDialog(false);
+        }
+    };
+
     return (
         <Box
             sx={{
                 padding: "10px",
                 minHeight: "100vh",
             }}>
-            <Grid2 columns={{ xs: 2, sm: 4 }} container spacing={"10px"}>
-                {products.map((product) => (
-                    <Grid2
-                        sx={{ width: "calc(25% - 10px)", aspectRatio: "1/1" }}
-                        key={product._id}>
-                        <Card
+            {loading ? (
+                <Typography variant="h6" align="center">
+                    Chargement...
+                </Typography>
+            ) : error ? (
+                <Typography variant="h6" color="error" align="center">
+                    {error}
+                </Typography>
+            ) : products.length === 0 ? (
+                <Typography variant="h6" align="center">
+                    Aucun produit trouvé
+                </Typography>
+            ) : (
+                <Grid2 columns={{ xs: 2, sm: 4 }} container spacing={"10px"}>
+                    {products.map((product, idx) => (
+                        <Grid2
                             sx={{
-                                width: "100%",
-                                borderRadius: "10px",
-                                boxShadow: "0 4px 10px rgba(0, 0, 0, 0.1)",
-                                overflow: "hidden",
-                                display: "flex",
-                                flexDirection: "column",
-                                justifyContent: "space-between",
-                            }}>
-                            <CardMedia
-                                component="img"
-                                height={250}
-                                image={
-                                    "https://images.pexels.com/photos/699122/pexels-photo-699122.jpeg"
+                                width: "calc(25% - 10px)",
+                                aspectRatio: "1/1",
+                            }}
+                            key={idx}>
+                            <ProductCard
+                                product={product}
+                                onUpdate={(product) =>
+                                    handleOpenDialog("update", product)
                                 }
-                                alt={product.name}
+                                onDelete={(product) =>
+                                    handleOpenDialog("delete", product)
+                                }
                             />
-                            <CardContent>
-                                <Typography variant="h6" fontWeight="bold">
-                                    {product.name}
-                                </Typography>
-                                <Box
-                                    sx={{
-                                        display: "flex",
-                                        justifyContent: "space-between",
-                                        alignItems: "center",
-                                        marginTop: "10px",
-                                    }}>
-                                    <Typography
-                                        variant="body1"
-                                        fontWeight="bold">
-                                        £{product.price.toFixed(2)}
-                                    </Typography>
-                                </Box>
-                            </CardContent>
-                            <ButtonGroup
-                                fullWidth
-                                sx={{ gap: "10px", padding: "10px" }}>
-                                <Button
-                                    startIcon={<Refresh />}
-                                    variant="contained"
-                                    color="secondary"
-                                    onClick={() =>
-                                        handleOpenDialog("update", product)
-                                    }>
-                                    Update
-                                </Button>
-                                <Button
-                                    variant="outlined"
-                                    endIcon={<Delete />}
-                                    onClick={() =>
-                                        handleOpenDialog("delete", product)
-                                    }>
-                                    Delete
-                                </Button>
-                            </ButtonGroup>
-                        </Card>
-                    </Grid2>
-                ))}
-            </Grid2>
+                        </Grid2>
+                    ))}
+                </Grid2>
+            )}
             <Fab
                 sx={{
                     position: "fixed",
@@ -202,91 +214,17 @@ export default function HomePage() {
                 onClick={() => handleOpenDialog("add")}>
                 <Add />
             </Fab>
-
-            {/* Dialog */}
-            <Dialog open={openDialog} onClose={handleCloseDialog}>
-                <DialogTitle>
-                    {dialogType === "update"
-                        ? "Update Product"
-                        : dialogType === "delete"
-                        ? "Delete Product"
-                        : "Add Product"}
-                </DialogTitle>
-                <DialogContent>
-                    {dialogType === "delete" ? (
-                        <Typography>
-                            Are you sure you want to delete{" "}
-                            {selectedProduct?.name}?
-                        </Typography>
-                    ) : (
-                        <>
-                            <TextField
-                                fullWidth
-                                label="Name"
-                                value={formValues.name}
-                                onChange={(e) =>
-                                    handleFormChange("name", e.target.value)
-                                }
-                                sx={{ mb: 2 }}
-                            />
-                            <TextField
-                                fullWidth
-                                label="Type"
-                                value={formValues.type}
-                                onChange={(e) =>
-                                    handleFormChange("type", e.target.value)
-                                }
-                                sx={{ mb: 2 }}
-                            />
-                            <TextField
-                                fullWidth
-                                label="Price"
-                                type="number"
-                                value={formValues.price}
-                                onChange={(e) =>
-                                    handleFormChange("price", +e.target.value)
-                                }
-                                sx={{ mb: 2 }}
-                            />
-                            <TextField
-                                fullWidth
-                                label="Warranty Years"
-                                type="number"
-                                value={formValues.warranty_years}
-                                onChange={(e) =>
-                                    handleFormChange(
-                                        "warranty_years",
-                                        +e.target.value
-                                    )
-                                }
-                                sx={{ mb: 2 }}
-                            />
-                            <TextField
-                                fullWidth
-                                label="Available"
-                                value={formValues.available ? "true" : "false"}
-                                onChange={(e) =>
-                                    handleFormChange(
-                                        "available",
-                                        e.target.value === "true"
-                                    )
-                                }
-                                sx={{ mb: 2 }}
-                            />
-                        </>
-                    )}
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleCloseDialog}>Cancel</Button>
-                    {dialogType === "delete" ? (
-                        <Button color="error">Delete</Button>
-                    ) : (
-                        <Button color="primary">
-                            {dialogType === "update" ? "Update" : "Add"}
-                        </Button>
-                    )}
-                </DialogActions>
-            </Dialog>
+            <ProductDialog
+                open={openDialog}
+                onClose={handleCloseDialog}
+                dialogType={dialogType}
+                formValues={formValues}
+                onFormChange={handleFormChange}
+                selectedProduct={selectedProduct}
+                onAddProduct={handleAddProductSubmit}
+                onUpdate={handleUpdateProduct}
+                onDelete={handleDeleteProduct}
+            />
         </Box>
     );
 }

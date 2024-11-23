@@ -40,7 +40,6 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
     onUpdate,
     onDelete,
 }) => {
-    // Fonction de soumission du formulaire
     const handleSubmit = () => {
         const productData: ProductType = {
             name: formValues.name,
@@ -51,13 +50,9 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
             rating: 0,
         };
 
-        // Si c'est une action d'ajout
         if (dialogType === "add") {
             onAddProduct(productData);
-        }
-        // Si c'est une action de mise à jour
-        else if (dialogType === "update" && selectedProduct) {
-            // On conserve l'_id existant pour la mise à jour
+        } else if (dialogType === "update" && selectedProduct) {
             const updatedProductData = {
                 ...productData,
                 _id: selectedProduct._id,

@@ -21,6 +21,7 @@ type ProductDialogProps = {
         price: number;
         warranty_years: number;
         available: boolean;
+        rating: number;
     };
     onFormChange: (field: string, value: any) => void;
     selectedProduct?: ProductType | null;
@@ -47,7 +48,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
             price: formValues.price,
             warranty_years: formValues.warranty_years,
             available: formValues.available,
-            rating: 0,
+            rating: formValues.rating,
         };
 
         if (dialogType === "add") {
@@ -99,6 +100,7 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
                             fullWidth
                             label="Price"
                             type="number"
+                            inputProps={{ min: 0, step: 0.01 }}
                             value={formValues.price}
                             onChange={(e) =>
                                 onFormChange("price", +e.target.value)
@@ -129,6 +131,17 @@ const ProductDialog: React.FC<ProductDialogProps> = ({
                             <MenuItem value="true">Yes</MenuItem>
                             <MenuItem value="false">No</MenuItem>
                         </TextField>
+                        <TextField
+                            fullWidth
+                            label="Rating"
+                            type="number"
+                            inputProps={{ min: 0, max: 5, step: 0.1 }}
+                            value={formValues.rating}
+                            onChange={(e) =>
+                                onFormChange("rating", +e.target.value)
+                            }
+                            sx={{ mb: 2 }}
+                        />
                     </>
                 )}
             </DialogContent>

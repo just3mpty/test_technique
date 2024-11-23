@@ -10,7 +10,7 @@ import {
     Button,
     Box,
 } from "@mui/material";
-import { Refresh, Delete } from "@mui/icons-material";
+import { Refresh, Delete, Star, StarHalf } from "@mui/icons-material";
 import { ProductType } from "@/types/ProductType";
 
 type ProductCardProps = {
@@ -24,6 +24,24 @@ const ProductCard: React.FC<ProductCardProps> = ({
     onUpdate,
     onDelete,
 }) => {
+    const renderStars = (rating: number) => {
+        const fullStars = Math.floor(rating);
+        const hasHalfStar = rating % 1 >= 0.5;
+        const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+
+        return (
+            <Box sx={{ display: "flex", alignItems: "center" }}>
+                {Array.from({ length: fullStars }).map((_, i) => (
+                    <Star key={`full-${i}`} color="primary" />
+                ))}
+                {hasHalfStar && <StarHalf color="primary" />}
+                {Array.from({ length: emptyStars }).map((_, i) => (
+                    <Star key={`empty-${i}`} color="disabled" />
+                ))}
+            </Box>
+        );
+    };
+
     return (
         <Card
             sx={{
@@ -54,6 +72,17 @@ const ProductCard: React.FC<ProductCardProps> = ({
                     }}>
                     <Typography variant="body1" fontWeight="bold">
                         £{product.price}
+                    </Typography>
+                </Box>
+                <Box
+                    sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        marginTop: "10px",
+                    }}>
+                    {renderStars(product.rating)}
+                    <Typography variant="body2" sx={{ marginLeft: "10px" }}>
+                        {product.rating} / 5
                     </Typography>
                 </Box>
             </CardContent>

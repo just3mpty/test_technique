@@ -158,13 +158,7 @@ export default function HomePage() {
                 body: JSON.stringify(updatedProduct),
             });
             const data = await res.json();
-            dispatch(
-                setProducts(
-                    products.map((product: ProductType) =>
-                        product._id === data._id ? data : product
-                    )
-                )
-            );
+            dispatch(updateProduct(data));
             setOpenDialog(false);
         }
     };
@@ -175,13 +169,7 @@ export default function HomePage() {
                 method: "DELETE",
             });
             const data = await res.json();
-            dispatch(
-                setProducts(
-                    products.filter(
-                        (product: ProductType) => product._id !== data._id
-                    )
-                )
-            );
+            dispatch(deleteProduct(data));
             setOpenDialog(false);
         }
     };
@@ -202,13 +190,13 @@ export default function HomePage() {
                 </Typography>
             ) : (
                 <Grid2 columns={{ xs: 2, sm: 4 }} container spacing={"10px"}>
-                    {products.map((product: ProductType, idx: number) => (
+                    {products.map((product: ProductType) => (
                         <Grid2
                             sx={{
                                 width: "calc(25% - 10px)",
                                 aspectRatio: "1/1",
                             }}
-                            key={idx}>
+                            key={product._id}>
                             <ProductCard
                                 product={product}
                                 onUpdate={(product) =>

@@ -6,6 +6,7 @@ const productSchema = new Schema({
     price: { type: Number, required: true },
     warranty_years: { type: Number, required: true },
     available: { type: Boolean, required: true },
+    rating: { type: Number, required: true },
 });
 
 const Product = models.Product || model("Product", productSchema);

@@ -17,8 +17,17 @@ export function GET(req: NextApiRequest) {
             socket.on("disconnect", () => {
                 console.log("Utilisateur déconnecté :", socket.id);
             });
+
             socket.on("add_product", (product) => {
                 io?.emit("product_added", product);
+            });
+
+            socket.on("update_product", (product) => {
+                io?.emit("product_updated", product);
+            });
+
+            socket.on("delete_product", (productId) => {
+                io?.emit("product_deleted", productId);
             });
         });
     }
